@@ -3,25 +3,57 @@
 #
 
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QInputDialog, QMessageBox, QHBoxLayout, QStyleFactory, QFileDialog
-from PyQt6.QtGui import QIcon, QTextCursor, QPalette
-from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QInputDialog, QMessageBox, QHBoxLayout, QFileDialog, QMenu, QDialog
+from PyQt6.QtGui import QIcon, QCursor, QMovie
+from PyQt6.QtCore import Qt, QThread
 from random import randint
 import socket
 import threading
 import time
 import base64
 import mimetypes
+from playsound import playsound
+import re
+import os
+import requests
 
 buffer_size = 4096
+
+class FunctionMenu(QMenu):
+    def __init__(self, functions, parent=None):
+        super().__init__(parent)
+        self.functions = functions
+        for function_name, function in functions.items():
+            action = self.addAction(function_name)
+            action.triggered.connect(function)
 
 class Stealthy(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Stealthy Chat")
         self.setGeometry(100, 100, 600, 400)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.setStyleSheet("background-color: #121c1a; color: white;")
+        self.global_css = """
+                           background-color: #121c1a; 
+                           color: white;
+                           """
+
+        self.menu_css = """QMenu {
+                            background-color: #121c1a;
+                            border-radius: 5px;
+                            border: 1px solid gray;
+                            color: #c9c9c9;
+                            padding-left: 4px;
+                            padding-top: 4px;
+                        }
+                        QMenu::item:selected { 
+                            background-color: #00618e; 
+                            border-radius: 5px;
+                            color: white;
+                        }"""
+
+        self.setStyleSheet(self.global_css)
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -39,12 +71,22 @@ class Stealthy(QMainWindow):
         with open('./client-data/unconnected.html', 'r') as file:
             html = file.read()
             self.chat_history.append(html)
+        self.chat_history.textChanged.connect(self.text_changed)
         self.layout.addWidget(self.chat_history)
 
         hbox = QHBoxLayout()
         self.upload_button = QPushButton("")
-        self.upload_button.clicked.connect(self.upload_image)
+        self.upload_button.clicked.connect(self.open_upload_menu)
         self.upload_button.setIcon(QIcon("./client-data/upload-48.png"))
+
+        self.upload_menu = QMenu()
+        files_action = self.upload_menu.addAction("Upload Files...")
+        files_action.setIcon(QIcon('./client-data/QMenu/file-upload-96.png'))
+        files_action.triggered.connect(self.upload_file)
+        images_action = self.upload_menu.addAction("Upload Images...")
+        images_action.setIcon(QIcon('./client-data/QMenu/img-upload-96.png'))
+        images_action.triggered.connect(self.upload_image)
+        self.upload_menu.setStyleSheet(self.menu_css)
 
         self.input_box = QLineEdit()
         self.input_box.returnPressed.connect(self.send_message)
@@ -61,6 +103,33 @@ class Stealthy(QMainWindow):
         self.client_socket = None
         self.username = ""
         self.connected = False
+    
+    def open_upload_menu(self):
+        self.upload_menu.exec(QCursor.pos())
+
+    def upload_file(self):
+        file_dialog = QFileDialog(self)
+        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+        file_dialog.setViewMode(QFileDialog.ViewMode.List)
+        file_dialog.setNameFilter("All files (*.*)")
+        file_dialog.setWindowTitle("Select file(s) only - Upload Stealthy Chat")
+        
+        if file_dialog.exec():
+            selected_files = file_dialog.selectedFiles()
+            for file_path in selected_files:
+                try:
+                    with open(file_path, 'r') as file:
+                        data = file.readlines()
+
+                        final_message = f'<br><i>Attachment - {os.path.basename(file_path)}</i><hr style="color:gray;background-color:gray;">'
+                        for info in data:
+                            final_message += f'{info}<br>'
+                        final_message += '<hr style="color:gray;background-color:gray;">'
+                        self.client_socket.send(final_message.encode('utf-8'))
+
+                except Exception as e:
+                    QMessageBox.critical(self, 'Error', 'Failed uploading file(s), backend message: ' + str(e))
+                    break
 
     def upload_image(self):
         file_dialog = QFileDialog(self)
@@ -94,6 +163,10 @@ class Stealthy(QMainWindow):
         except:
             foo = 0
         sys.exit()
+
+    def text_changed(self):
+        scroll_bar = self.chat_history.verticalScrollBar()
+        scroll_bar.setValue(scroll_bar.maximum())
         
     def input_ip_port(self):
         ip, ok1 = QInputDialog.getText(self, 'Enter IP and Port', 'Enter IP and Port in format of IP:Port (e.g. localhost:5454)')
@@ -130,13 +203,31 @@ class Stealthy(QMainWindow):
                         new_msg = split_msg[0] + '</font>'
 
                     self.chat_history.append('<font color=\'cyan\'>' + new_msg)
+                    if not self.window().isActiveWindow():
+                        playsound('./client-data/notification.mp3')
                 else:
                     self.chat_history.append(message)
+
             except ConnectionResetError:
                 QMessageBox.critical(self, 'Error', 'Connection to the server closed.')
                 break
             except Exception as e:
                 break
+    
+    def markdown_to_html(self, markdown):
+        html = markdown
+    
+        # Convert bold
+        html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', html)
+    
+        # Convert italic
+        html = re.sub(r'\*(.*?)\*', r'<i>\1</i>', html)
+    
+        # Convert underline
+        html = re.sub(r'__(.*?)__', r'<u>\1</u>', html)
+
+        html = re.sub(r'^#+\s*(.*?)$', lambda match: f'<h{match.group(0).count("#")}>{match.group(1)}</h{match.group(0).count("#")}>', html, flags=re.MULTILINE)
+        return html
 
     def send_message(self):
         if not self.connected:
@@ -159,7 +250,7 @@ class Stealthy(QMainWindow):
         elif not message:
             return
         else:
-            self.client_socket.send(message.encode('utf-8'))
+            self.client_socket.send(self.markdown_to_html(message).encode('utf-8'))
             self.input_box.clear()
     
     def is_valid_port(self, port):
@@ -181,21 +272,26 @@ class Stealthy(QMainWindow):
                 if self.username:
                     self.chat_history.clear()
                     bytes_sent = self.client_socket.send(self.username.encode('utf-8'))
-
-                    receive_thread = threading.Thread(target=self.receive_messages)
-                    receive_thread.start()
-                    self.connect_button.hide()
-                    self.connected = True
-                    self.setWindowTitle("Stealthy Chat : Connected")
+                    
                 else:
                     self.chat_history.clear()
-                    bytes_sent = self.client_socket.send(('user-'+str(randint(100, 999))).encode('utf-8'))
 
-                    receive_thread = threading.Thread(target=self.receive_messages)
-                    receive_thread.start()
-                    self.connect_button.hide()
-                    self.connected = True
-                    self.setWindowTitle("Stealthy Chat : Connected")
+                    url = "https://random-word-api.herokuapp.com/word?number=2"
+                    response = requests.get(url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        capitalized_words = [word.capitalize() for word in data]
+                        combined_string = "".join(capitalized_words)
+                        self.client_socket.send(combined_string.encode('utf-8'))
+                    else:
+                        self.client_socket.send(('user-'+str(randint(100, 999))).encode('utf-8'))
+
+                receive_thread = threading.Thread(target=self.receive_messages)
+                receive_thread.start()
+                self.connect_button.hide()
+                self.connected = True
+                self.setWindowTitle("Stealthy Chat : Connected")
+
             except Exception as e:
                 error_msg = str(e)
                 QMessageBox.critical(self, 'Error', 'Backend error : ' + error_msg)

@@ -1,5 +1,5 @@
 {
     "ip": "localhost",
-    "port": 4444,
+    "port": 5454,
     "max-members": 100
 }

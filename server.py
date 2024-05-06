@@ -74,7 +74,7 @@ def handle_client(client_socket, username):
             elif message == '/ping':
                 broadcast('<font color=\'lightgrey\'>Pong!</font>')
             elif message == '/members':
-                client_socket.sendall(("</font>"+str(clients)).encode())
+                client_socket.sendall((str(list(clients.keys()))).encode())
             else:
                 broadcast(f'{username}: {message}')
         except ConnectionResetError:
@@ -96,8 +96,12 @@ def broadcast(message):
 def handle_commands(command):
     command = str(command)
     if command == "/quit":
-        info("Now press Ctrl+C for safe exit")
-        stop_server(None, None)
+        # stop_server(None, None)
+        info("Now its safe to press Ctrl+C")
+        broadcast("Server is stopping.")
+        for client_socket in clients.values():
+            client_socket.close()
+        exit(0)
     elif command.startswith("/kick "):
         try:
             arg1 = command.split("/kick ")[1];
