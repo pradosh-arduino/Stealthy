@@ -249,6 +249,8 @@ class Stealthy(QMainWindow):
             self.input_box.clear()
         elif not message:
             return
+        elif message.replace(" ", "") == "":
+            return
         else:
             self.client_socket.send(self.markdown_to_html(message).encode('utf-8'))
             self.input_box.clear()
