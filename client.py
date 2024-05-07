@@ -274,18 +274,22 @@ class Stealthy(QMainWindow):
                     bytes_sent = self.client_socket.send(self.username.encode('utf-8'))
                     
                 else:
-                    self.chat_history.clear()
 
                     url = "https://random-word-api.herokuapp.com/word?number=2"
-                    response = requests.get(url)
-                    if response.status_code == 200:
-                        data = response.json()
-                        capitalized_words = [word.capitalize() for word in data]
-                        combined_string = "".join(capitalized_words)
-                        self.client_socket.send(combined_string.encode('utf-8'))
-                    else:
+                    try:
+                        response = requests.get(url)
+                        if response.status_code == 200:
+                            data = response.json()
+                            capitalized_words = [word.capitalize() for word in data]
+                            combined_string = "".join(capitalized_words)
+                            self.client_socket.send(combined_string.encode('utf-8'))
+                        else:
+                            self.client_socket.send(('user-'+str(randint(100, 999))).encode('utf-8'))
+                    except:
                         self.client_socket.send(('user-'+str(randint(100, 999))).encode('utf-8'))
 
+                    self.chat_history.clear()
+                
                 receive_thread = threading.Thread(target=self.receive_messages)
                 receive_thread.start()
                 self.connect_button.hide()
