@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget, QVBoxLay
 from PyQt6.QtGui import QIcon, QCursor, QMovie
 from PyQt6.QtCore import Qt, QThread
 from random import randint
+import subprocess
 import socket
 import threading
 import time
@@ -80,12 +81,19 @@ class Stealthy(QMainWindow):
         self.upload_button.setIcon(QIcon("./client-data/upload-48.png"))
 
         self.upload_menu = QMenu()
+
         files_action = self.upload_menu.addAction("Upload Files...")
         files_action.setIcon(QIcon('./client-data/QMenu/file-upload-96.png'))
         files_action.triggered.connect(self.upload_file)
+
         images_action = self.upload_menu.addAction("Upload Images...")
         images_action.setIcon(QIcon('./client-data/QMenu/img-upload-96.png'))
         images_action.triggered.connect(self.upload_image)
+
+        command_action = self.upload_menu.addAction("Upload Command output...")
+        command_action.setIcon(QIcon('./client-data/QMenu/command-line-96.png'))
+        command_action.triggered.connect(self.upload_output)
+
         self.upload_menu.setStyleSheet(self.menu_css)
 
         self.input_box = QLineEdit()
@@ -106,6 +114,20 @@ class Stealthy(QMainWindow):
     
     def open_upload_menu(self):
         self.upload_menu.exec(QCursor.pos())
+
+    def upload_output(self):
+        command, ok = QInputDialog.getText(self, 'Enter value', 'Enter the command to be executed and to share the output:')
+        if ok:
+            final_message = f"<br><i>Attachment of a command output - {command}</i><hr>"
+            try:
+                result = subprocess.run(command.split(), capture_output=True, text=True)  # Capture output as string
+                output = result.stdout.splitlines()
+                for line in output:
+                    final_message += line + "<br>"
+            except subprocess.CalledProcessError as error:
+                final_message += error
+            final_message += "<hr>"
+            self.client_socket.send(final_message.encode('utf-8'))
 
     def upload_file(self):
         file_dialog = QFileDialog(self)
@@ -246,6 +268,9 @@ class Stealthy(QMainWindow):
             end_time = time.time()
             round_trip_time = (end_time - start_time) * 1000
             self.chat_history.append(f"Server response: {response}, Round-trip time: {round(round_trip_time, 4)}ms")
+            self.input_box.clear()
+        elif message == '/clear':
+            self.chat_history.clear()
             self.input_box.clear()
         elif not message:
             return
