@@ -83,24 +83,23 @@ def handle_client(client_socket, username):
             broadcast(f'<font color=\'lightgrey\'>{username} has left the chat.</font>')
             break
         except OSError:
-            info("OSError has occoured but its fine.")
-            break
+            pass
 
 def broadcast(message):
     try:
         for client_socket in clients.values():
             client_socket.send(message.encode('utf-8'))
-    except:
-        bar = 0
+    except Exception as e:
+        error(f"Error broadcasting message: {e}")
 
 def handle_commands(command):
     command = str(command)
     if command == "/quit":
         # stop_server(None, None)
-        info("Now its safe to press Ctrl+C")
         broadcast("Server is stopping.")
         for client_socket in clients.values():
             client_socket.close()
+        info("Now its safe to press Ctrl+C")
         exit(0)
     elif command.startswith("/kick "):
         try:
@@ -187,7 +186,7 @@ def main():
     command_thread.start()
 
     while True:
-        if len(clients) >= MAX_MEMBERS:
+        if len(clients) > MAX_MEMBERS:
             # Server is full, reject new connections
             client_socket, _ = server.accept()
             client_socket.send("Server is full. Please try again later.".encode('utf-8'))
@@ -196,7 +195,7 @@ def main():
 
         # Accept new connections
         client_socket, client_address = server.accept()
-        info(f'New connection from {client_address}')
+        info(f'New connection from {client_address[0]}:{client_address[1]}')
 
         username = client_socket.recv(buffer_size).decode('utf-8')
         clients[username] = client_socket
