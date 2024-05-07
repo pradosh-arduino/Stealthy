@@ -305,6 +305,6 @@ class Stealthy(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    client = Stealthy()
+    client = Stealthy() # pun intended
     client.show()
     sys.exit(app.exec())
