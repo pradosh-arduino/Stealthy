@@ -3,9 +3,9 @@
 #
 
 import sys
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QInputDialog, QMessageBox, QHBoxLayout, QFileDialog, QMenu, QDialog
-from PyQt6.QtGui import QIcon, QCursor, QMovie
-from PyQt6.QtCore import Qt, QThread
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QPushButton, QInputDialog, QMessageBox, QHBoxLayout, QFileDialog, QMenu
+from PyQt6.QtGui import QIcon, QCursor
+from PyQt6.QtCore import Qt
 from random import randint
 import subprocess
 import socket
