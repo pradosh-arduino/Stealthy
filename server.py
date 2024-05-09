@@ -205,7 +205,7 @@ def main():
 
         broadcast(f'<font color=\'lightgrey\'>{username} has joined the chat.</font>')
         if json_data['welcome-message']:
-            client_socket.send(("<br>" + json_data['welcome-message']).encode('utf-8'))
+            client_socket.send(("<br>" + str(json_data['welcome-message']).replace('{username}', username)).encode('utf-8'))
 
         # Start a new thread to handle the client
         client_thread = threading.Thread(target=handle_client, args=(client_socket, username))

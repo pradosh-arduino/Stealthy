@@ -1,6 +1,6 @@
 {
     "ip": "localhost",
-    "port": 1212,
+    "port": 5454,
     "max-members": 100,
-    "welcome-message": "Hey welcome! this is a friendly community, please enjoy your stay!"
+    "welcome-message": "Hey welcome {username}! this is a friendly community, please enjoy your stay!"
 }
