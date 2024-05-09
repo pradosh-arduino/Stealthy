@@ -32,8 +32,13 @@ class Stealthy(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Stealthy Chat")
+        self.setWindowIcon(QIcon("./client-data/icon.png"))
         self.setGeometry(100, 100, 600, 400)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
+        if not os.path.exists("./client-data"):
+            QMessageBox.critical(self, 'Error', 'The client-data folder is missing which is required for the Stealthy Chat! (to fix it git clone the https://github.com/pradosh-arduino/Stealthy and copy the client-data folder from that)')
+            exit(-1)
 
         self.global_css = """
                            background-color: #121c1a; 
@@ -118,16 +123,17 @@ class Stealthy(QMainWindow):
     def upload_output(self):
         command, ok = QInputDialog.getText(self, 'Enter value', 'Enter the command to be executed and to share the output:')
         if ok:
-            final_message = f"<br><i>Attachment of a command output - {command}</i><hr>"
-            try:
-                result = subprocess.run(command.split(), capture_output=True, text=True)  # Capture output as string
-                output = result.stdout.splitlines()
-                for line in output:
-                    final_message += line + "<br>"
-            except subprocess.CalledProcessError as error:
-                final_message += error
-            final_message += "<hr>"
-            self.client_socket.send(final_message.encode('utf-8'))
+            if command:
+                final_message = f"<br><i>Attachment of a command output - {command}</i><hr>"
+                try:
+                    result = subprocess.run(command.split(), capture_output=True, text=True)  # Capture output as string
+                    output = result.stdout.splitlines()
+                    for line in output:
+                        final_message += line + "<br>"
+                except subprocess.CalledProcessError as error:
+                    final_message += error
+                final_message += "<hr>"
+                self.client_socket.send(final_message.encode('utf-8'))
 
     def upload_file(self):
         file_dialog = QFileDialog(self)
@@ -287,6 +293,7 @@ class Stealthy(QMainWindow):
             return False
 
     def connect_to_server(self):
+        QMessageBox.warning(self, 'Warning', 'The server you are connecting to can see your IP Address. Unless you trust them use a VPN/Tor')
         ip, port = self.input_ip_port()
         if not ip and not port:
             QMessageBox.critical(self, 'Error', 'Empty IP/Port has been entered!')

@@ -7,6 +7,7 @@ import socket
 import signal
 import threading
 import json
+import time
 
 HOST = ''
 PORT = 0
@@ -95,10 +96,12 @@ def broadcast(message):
 def handle_commands(command):
     command = str(command)
     if command == "/quit":
-        # stop_server(None, None)
         broadcast("Server is stopping.")
         for client_socket in clients.values():
             client_socket.close()
+        for i in range(10): # give it some time to clean up itself.
+            info(f"Please wait for {10 - i} seconds.")
+            time.sleep(1)
         info("Now its safe to press Ctrl+C")
         exit(0)
     elif command.startswith("/kick "):
@@ -201,6 +204,8 @@ def main():
         clients[username] = client_socket
 
         broadcast(f'<font color=\'lightgrey\'>{username} has joined the chat.</font>')
+        if json_data['welcome-message']:
+            client_socket.send(("<br>" + json_data['welcome-message']).encode('utf-8'))
 
         # Start a new thread to handle the client
         client_thread = threading.Thread(target=handle_client, args=(client_socket, username))
